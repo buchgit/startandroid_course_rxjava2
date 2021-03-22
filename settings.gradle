@@ -1,0 +1,2 @@
+include ':app'
+rootProject.name = "startandroid_course_rxjava2"
