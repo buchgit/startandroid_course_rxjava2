@@ -23,23 +23,23 @@ public class MainActivity extends AppCompatActivity {
 
         Observable.OnSubscribe onSubscribe = new Observable.OnSubscribe<Integer>() {
             @Override
-            public void call(Subscriber<? super Integer> subscriber) {
+            public void call(Subscriber<?super Integer>subscriber) {
                 for (int i = 0; i < 10; i++) {
                     try {
                         TimeUnit.MILLISECONDS.sleep(300);
+                        Log.d(TAG, "call in tread:" + Thread.currentThread().getName());
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    Log.d(TAG,Thread.currentThread().getName());
                     subscriber.onNext(i);
                 }
                 subscriber.onCompleted();
             }
         };
 
-        Observable<Long>observable = Observable
+        Observable observable = Observable
                 .create(onSubscribe)
-                .subscribeOn(Schedulers.newThread())
+                .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread());
 
         Observer<Long> observer = new Observer() {
