@@ -8,6 +8,8 @@ import rx.Observable;
 import rx.Observer;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 import java.util.concurrent.TimeUnit;
@@ -21,47 +23,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Observable.OnSubscribe onSubscribe = new Observable.OnSubscribe<Integer>() {
-            @Override
-            public void call(Subscriber<?super Integer>subscriber) {
-                for (int i = 0; i < 10; i++) {
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(300);
-                        Log.d(TAG, "call in tread:" + Thread.currentThread().getName());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    subscriber.onNext(i);
-                }
-                subscriber.onCompleted();
-            }
-        };
+        Observable<String> stringData = Observable.just("1", "2", "a", "4", "5");
 
-        Observable observable = Observable
-                .create(onSubscribe)
-                .subscribeOn(Schedulers.computation())
-                .observeOn(AndroidSchedulers.mainThread());
+        Observable<Long> observable = stringData
+                .map(Long::parseLong);
 
-        Observer<Long> observer = new Observer() {
-            @Override
-            public void onCompleted() {
-                Log.d(TAG, "onCompleted: ");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.d(TAG, "onError: ");
-            }
-
-            @Override
-            public void onNext(Object o) {
-                Log.d(TAG, "onNext: "+ o);
-                Log.d(TAG,Thread.currentThread().getName());
-
-            }
-        };
-
-        observable.subscribe(observer);
+        observable.subscribe(aLong -> Log.d(TAG, "call: " + aLong)
+                , throwable -> Log.d(TAG, throwable.getMessage()));
 
     }
 }
