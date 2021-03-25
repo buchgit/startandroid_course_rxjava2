@@ -26,10 +26,15 @@ public class MainActivity extends AppCompatActivity {
         Observable<String> stringData = Observable.just("1", "2", "a", "4", "5");
 
         Observable<Long> observable = stringData
-                .map(Long::parseLong);
+                .map(Long::parseLong)
+                .onErrorReturn(throwable -> { //перехватили ошибку и вернули 0L
+                    Log.d(TAG, throwable.getMessage());
+                    return 0L;
+                });
 
-        observable.subscribe(aLong -> Log.d(TAG, "call: " + aLong)
-                , throwable -> Log.d(TAG, throwable.getMessage()));
+//        observable.subscribe(aLong -> Log.d(TAG, "call: " + aLong)
+//                , throwable -> Log.d(TAG, throwable.getMessage()));
+        observable.subscribe(aLong->Log.d(TAG,"call: " + aLong));//вывод на onNext
 
     }
 }
