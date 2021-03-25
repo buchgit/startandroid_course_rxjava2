@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 onErrorReturn
 onErrorResumeNext
 onExceptionResumeNext не поймает как onErrorResumeNext ошибки Throwable и Error, но только Exception
+retry()
  */
 
 public class MainActivity extends AppCompatActivity {
