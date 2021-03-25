@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
                 .map(Long::parseLong)
                 .onErrorReturn(throwable -> { //перехватили ошибку и вернули 0L
                     Log.d(TAG, throwable.getMessage());
-                    return 0L;
+                    return 0L;//здесь будет вызван onCompleted
                 });
 
 //        observable.subscribe(aLong -> Log.d(TAG, "call: " + aLong)
