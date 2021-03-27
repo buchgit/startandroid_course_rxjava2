@@ -4,6 +4,11 @@ import android.util.Log;
 import androidx.annotation.LongDef;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 import rx.Observable;
 import rx.Observer;
 import rx.Subscriber;
@@ -14,24 +19,26 @@ import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /*
-Урок 8. Операторы объединения
-merge - объединяет, обсервелы идут параллельно
-concat - параллельность только для одного обсервебла, то есть последовательно
-amb - ждет, который из абсервеблов будет первым, того и будет выводить
-zip - склеивает два обсервебла по функции Func2(in,in,out), ждет более медленный обсервебл для пары
-combineLatest - как zip склеивает два обсервебла, но пара берется всякий раз,
-                когда приходит значение любого из двух обсервеблов, при этом из второго
-                берется последнее значение
-withLatestFrom - на каждого значение основного обсервебла берется последнее значение
-                второго обсервебла. Можно использовать более чем на двух обсервеблах.
-flatMap - ...  в стримах разворачивает по-элементно все коллекции. Тут нечто похожее.
+Урок 9. Retrofit 2. Retrolambda.
 
+Подключение
+// retrofit
+compile 'com.squareup.retrofit2:retrofit:2.2.0'
+compile 'com.squareup.retrofit2:converter-gson:2.2.0'
+compile 'com.squareup.retrofit2:adapter-rxjava:2.2.0'
 
+// rxjava
+compile 'io.reactivex:rxjava:1.2.10'
+compile 'io.reactivex:rxandroid:1.2.1'
 
-
+Первая строка - непосредственно Retrofit.
+Вторая - способность Retrofit конвертировать json в объекты.
+Третья - способность Retrofit работать с RxJava.
+Четвертая и пятая строки - это RxJava
  */
 
 public class MainActivity extends AppCompatActivity {
@@ -43,38 +50,30 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Observable observable1 = Observable.interval(1,TimeUnit.MILLISECONDS).take(300);
-        Observable observable2 = Observable.range(100,200).timeInterval();
+        Retrofit retrofit = new Retrofit.Builder()
+                .addConverterFactory(GsonConverterFactory.create())
+                .baseUrl("https://rawgit.com/startandroid/data/master/messages/")
+                .build();
 
+        WebApi webApi = retrofit.create(WebApi.class);
 
-        observable1.mergeWith(observable2).subscribe(new Action1() {
+        Call<List<Message>> call = webApi.messages(2);
+
+        call.enqueue(new Callback<List<Message>>() {
             @Override
-            public void call(Object o) {
-                Log.d(TAG, "call: "+ o);
+            public void onResponse(Call<List<Message>> call, Response<List<Message>> response) {
+                if (response.isSuccessful()){
+                    assert response.body()!=null;
+                    Log.d(TAG, "onResponse, message count: " + response.body().size());
+                }else{
+                    Log.d(TAG, "onResponse error: "+ response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Message>> call, Throwable t) {
+                Log.d(TAG, "onFailure: "+ t.getMessage());
             }
         });
-
-        //Observable.merge(observableArray, n) //n - ограничение по количеству observable
-
-        //observable1.concatWith(observable2)
-
-        //Observable.amb(observable1, observable2)
-
-        //observable1
-        //        .zipWith(observable2, new Func2<Long, Long, String>() {
-        //            @Override
-        //            public String call(Long aLong, Long aLong2) {
-        //                return String.format("%s and %s", aLong, aLong2);
-        //            }
-        //        })
-
-        //Observable
-        //        .combineLatest(observable1, observable2, new Func2<Long, Long, String>(){...})
-
-        //observable1
-        //        .withLatestFrom(observable2, new Func2<Long, Long, String>() {...}
-//        observable1
-//                .withLatestFrom(observable2, observable3, new Func3<Long, Long, Long, String>() {
-
     }
 }
