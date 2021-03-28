@@ -24,36 +24,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /*
-Урок 9. Retrolambda.
-
-Подключение к проекту
-Чтобы иметь возможность использовать лямбда, необходимо выполнить несколько шагов:
-
-1) Скачать и использовать, как основной, JDK 8.
-
-2) Добавить в gradle-файл проекта строки
-
-buildscript {
-  repositories {
-     mavenCentral()
-  }
-
-  dependencies {
-     classpath 'me.tatarka:gradle-retrolambda:3.2.3'
-  }
-}
-
-3) Добавить в gradle-файл app-модуля строки
-apply plugin: 'me.tatarka.retrolambda'
-
-android {
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-}
-
-ЛЯМБДЫ РАБОТАЮТ И БЕЗ ЭТИХ НАСТРОЕК 28.03.21
+Урок 10. Backpressure
 
  */
 
@@ -66,13 +37,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Observable.just("1", "2", "3", "4", "5")
-                .map(s -> Integer.parseInt(s))
-                .subscribe(
-                        s -> Log.d(TAG,"onNext " + s),
-                        throwable -> Log.d(TAG,"onError " + throwable),
-                        () -> Log.d(TAG,"onCompleted")
-                );
+        Observable.interval(100, TimeUnit.MILLISECONDS)
+                .take(30)
+                .subscribeOn(Schedulers.computation())
+                .doOnNext(new Action1<Long>() {
+                    @Override
+                    public void call(Long aLong) {
+                        Log.d(TAG, "post: " + aLong);
+                    }
+                })
+                .observeOn(Schedulers.io())
+                .subscribe(along -> {
+                            try {
+                                TimeUnit.MILLISECONDS.sleep(500);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            Log.d(TAG, "onNext: " + along.toString());
+                        }
+                        , throwable -> throwable.printStackTrace()
+                        , () -> Log.d(TAG, "onComplete : "));
+
+
 
 
     }
