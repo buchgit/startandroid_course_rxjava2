@@ -77,3 +77,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 }
+/*
+Синхронный запуск
+Если вы не в UI-потоке и вам надо выполнить запрос синхронно,
+то вместо enqueue необходимо вызывать метод execute
+Этот вызов блокирует ваш текущий поток и, в итоге, вернет результат или свалится с ошибкой
+
+Response<List<Message>> response = null;
+try {
+   response = call.execute();
+} catch (IOException e) {
+   e.printStackTrace();
+}
+
+
+ */
