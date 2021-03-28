@@ -26,25 +26,18 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /*
-Урок 10. SyncOnSubscribe
-если все-таки необходимо создать свой Observable,
-то RxJava предоставляет backpressure обертку - SyncOnSubscribe
+Урок 10. How to request data from Observable
 
-На вход нам необходимо передать две функции.
+использовать
+Subscriber.class
 
-Первая - должна возвращать начальное состояние. Мы возвращаем 1.
-Далее это начальное состояние пойдет во вторую функцию как первый параметр.
+new Subscriber<Integer>() {
+    @Override
+    public void onStart() {
+        super.onStart();
+        request(1);
+    }
 
-Вторая функция берет значение (текущее состояние),
-и либо отправляет его подписчику (если <= 20), либо завершает последовательность.
-Вернуть вторая функция должна новое состояние.
-В нашем случае мы просто увеличиваем число на 1 и получаем это новое состояние,
-которое снова придет к нам в следующем вызове функции.
-Т.е. каждый следующий вызов функции будет получать значение,
-которое вернул предыдущий вызов.
-
-backpressure проявляется,если Observable и Observer работают в разных потоках.
-Если в одном, то Observable будет синхронно ждать более медленного Observer-a.
  */
 
 public class MainActivity extends AppCompatActivity {
@@ -56,60 +49,32 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Метод createStateful создает OnSubscribe,
-        // который будет поддерживать backpressure
-        Observable.OnSubscribe<Integer>
-                onSubscribe = SyncOnSubscribe.createStateful(
-                new Func0<Integer>() {
+        Observable.range(1, 10)
+                .subscribe(new Subscriber<Integer>() {
                     @Override
-                    public Integer call() {
-                        return 1;
+                    public void onStart() {
+                        super.onStart();
+                        request(1);//количество запрашиваемых данных
                     }
-                },
-                new Func2<Integer, Observer<? super Integer>, Integer>() {
+
                     @Override
-                    public Integer call(Integer integer, Observer<? super Integer> observer) {
-                        Log.d(TAG,"sync call " + integer);
-                        if (integer <= 20) {
-                            observer.onNext(integer);
-                        } else {
-                            observer.onCompleted();
-                        }
-                        return integer + 1;
+                    public void onCompleted() {
+                        Log.d(TAG,"onCompleted");
                     }
-                }
-        );
 
-        Observable.create(onSubscribe)
-                .subscribeOn(Schedulers.computation())
-                .doOnNext(new Action1<Integer>() {
                     @Override
-                    public void call(Integer integer) {
-                        Log.d(TAG, "post: "+integer);
+                    public void onError(Throwable e) {
+                        Log.d(TAG,"onError " + e);
                     }
-                })
-                .observeOn(Schedulers.io())
-                .subscribe(new Observer<Integer>() {
-            @Override
-            public void onCompleted() {
-                Log.d(TAG, "onCompleted: ");
-            }
 
-            @Override
-            public void onError(Throwable e) {
-                Log.d(TAG, "onError: ");
-            }
-
-            @Override
-            public void onNext(Integer integer) {
-                try {
-                    TimeUnit.MILLISECONDS.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                Log.d(TAG, "onNext: "+ integer);
-            }
-        });
+                    @Override
+                    public void onNext(Integer integer) {
+                        Log.d(TAG,"onNext " + integer);
+                        request(1);//запрос новых данных после каждого получения
+                        //таким образом можно выбрать все данные, не указывая их количество
+                        //в методе onStart()
+                    }
+                });
 
 
     }
