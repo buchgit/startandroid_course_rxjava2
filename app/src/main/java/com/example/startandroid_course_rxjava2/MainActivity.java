@@ -41,7 +41,7 @@ compile 'io.reactivex:rxandroid:1.2.1'
 Третья - способность Retrofit работать с RxJava.
 Четвертая и пятая строки - это RxJava
 
-observable.toBlocking() - синхронный запрос
+list = observable.toBlocking().first();
  */
 
 public class MainActivity extends AppCompatActivity {
