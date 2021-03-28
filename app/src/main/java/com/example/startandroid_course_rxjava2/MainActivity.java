@@ -24,24 +24,37 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /*
-Урок 9. Retrofit 2. Retrolambda.
+Урок 9. Retrolambda.
 
-Подключение
-// retrofit
-compile 'com.squareup.retrofit2:retrofit:2.2.0'
-compile 'com.squareup.retrofit2:converter-gson:2.2.0'
-compile 'com.squareup.retrofit2:adapter-rxjava:2.2.0'
+Подключение к проекту
+Чтобы иметь возможность использовать лямбда, необходимо выполнить несколько шагов:
 
-// rxjava
-compile 'io.reactivex:rxjava:1.2.10'
-compile 'io.reactivex:rxandroid:1.2.1'
+1) Скачать и использовать, как основной, JDK 8.
 
-Первая строка - непосредственно Retrofit.
-Вторая - способность Retrofit конвертировать json в объекты.
-Третья - способность Retrofit работать с RxJava.
-Четвертая и пятая строки - это RxJava
+2) Добавить в gradle-файл проекта строки
 
-list = observable.toBlocking().first();
+buildscript {
+  repositories {
+     mavenCentral()
+  }
+
+  dependencies {
+     classpath 'me.tatarka:gradle-retrolambda:3.2.3'
+  }
+}
+
+3) Добавить в gradle-файл app-модуля строки
+apply plugin: 'me.tatarka.retrolambda'
+
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+ЛЯМБДЫ РАБОТАЮТ И БЕЗ ЭТИХ НАСТРОЕК 28.03.21
+
  */
 
 public class MainActivity extends AppCompatActivity {
@@ -53,47 +66,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Retrofit retrofit = new Retrofit.Builder()
-                .addConverterFactory(GsonConverterFactory.create())
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .baseUrl("https://rawgit.com/startandroid/data/master/messages/")
-                .build();
+        Observable.just("1", "2", "3", "4", "5")
+                .map(s -> Integer.parseInt(s))
+                .subscribe(
+                        s -> Log.d(TAG,"onNext " + s),
+                        throwable -> Log.d(TAG,"onError " + throwable),
+                        () -> Log.d(TAG,"onCompleted")
+                );
 
-        WebApi webApi = retrofit.create(WebApi.class);
 
-        Observable<List<Message>> observable = webApi.messages(2);
-
-        observable.subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<List<Message>>() {
-                    @Override
-                    public void onCompleted() {
-                        Log.d(TAG, "onCompleted: ");
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        Log.d(TAG, "onError: ");
-                    }
-
-                    @Override
-                    public void onNext(List<Message> messages) {
-                        Log.d(TAG, "onNext: size "+ messages.size());
-                    }
-                });
     }
 }
 
-/*
-Синхронный запуск
-Если вы не в UI-потоке и вам необходимо выполнить запрос синхронно, можно сделать так:
 
-List<Message> list = null;
-try {
-    list = observable.toBlocking().first();
-} catch (Exception e) {
-    e.printStackTrace();
-}
-
-Метод toBlocking сделает Observable синхронным, а first вернет первый элемент
- */
