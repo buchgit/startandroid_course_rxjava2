@@ -37,28 +37,52 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Observable.interval(100, TimeUnit.MILLISECONDS)
-                .take(30)
+        Observable.OnSubscribe<Integer> onSubscribe = new Observable.OnSubscribe<Integer>() {
+            @Override
+            public void call(Subscriber<? super Integer> subscriber) {
+                int i = 1;
+                while (i <= 20) {
+                    if (subscriber.isUnsubscribed()) {
+                        return;
+                    }
+                    subscriber.onNext(i++);
+                }
+                subscriber.onCompleted();
+            }
+        };
+
+        Observable.create(onSubscribe)
                 .subscribeOn(Schedulers.computation())
-                .doOnNext(new Action1<Long>() {
+                .onBackpressureBuffer()
+                .doOnNext(new Action1<Integer>() {       //Observable посылает Next()
                     @Override
-                    public void call(Long aLong) {
-                        Log.d(TAG, "post: " + aLong);
+                    public void call(Integer integer) {
+                        Log.d(TAG, "post:"+integer +"#"+ Thread.currentThread().getName());
                     }
                 })
                 .observeOn(Schedulers.io())
-                .subscribe(along -> {
-                            try {
-                                TimeUnit.MILLISECONDS.sleep(500);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            Log.d(TAG, "onNext: " + along.toString());
+                .subscribe(new Observer<Integer>() {
+                    @Override
+                    public void onCompleted() {
+                        Log.d(TAG, "onCompleted: ");
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Log.d(TAG, "onError: "+ e.getMessage());
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+
+                        Log.d(TAG, "onNext: "+ integer +"#"+ Thread.currentThread().getName()); //Observer принимает Next с задержкой
+                        try {
+                            TimeUnit.MILLISECONDS.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                         }
-                        , throwable -> throwable.printStackTrace()
-                        , () -> Log.d(TAG, "onComplete : "));
-
-
+                    }
+                });
 
 
     }
