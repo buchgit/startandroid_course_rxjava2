@@ -1,119 +1,27 @@
 package com.example.startandroid_course_rxjava2;
 
+import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
-import rx.Observable;
-import rx.Subscriber;
-import rx.Subscription;
+
+import io.reactivex.Flowable;
+import io.reactivex.FlowableSubscriber;
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.observers.TestObserver;
+import io.reactivex.plugins.RxJavaPlugins;
+import io.reactivex.subscribers.TestSubscriber;
+
+
+import java.util.concurrent.TimeUnit;
+
 
 /*
-Урок 11. RxJava 2
-
-Источников данных в RxJava :
-Observable и Flowable, Single, Completable, Maybe
-
-Observable не поддерживает backpressure
-
-Action1 переименован в Consumer, а Action0 в Action
-
-Используйте Observable, если
-1. Мало данных и, накапливаясь, они не смогут привести к OutOfMemoryError.
-
-2. Вы работаете с данными, которые не поддерживают backpressure, например:
-touch-события.
-
-Используйте Flowable, если
-1. Данные поддерживают backpressure, например: чтение с диска.
-
-//***************************** Observable ****************
-
-public interface Observer<T> {
-    void onSubscribe(@NonNull Disposable d);//новый метод в RxJava2
-    void onNext(@NonNull T t);
-    void onError(@NonNull Throwable e);
-    void onComplete();
-}
-public interface Disposable { //новый тип объекта
-    void dispose();
-    boolean isDisposed();
-}
-
-//новый тип объекта (обертка) вместо(для) Observer
-DisposableObserver disposableObserver = new DisposableObserver<Integer>() {
-    @Override
-    public void onNext(@NonNull Integer integer) {
-
-    }
-
-    @Override
-    public void onError(@NonNull Throwable e) {
-
-    }
-
-    @Override
-    public void onComplete() {
-
-    }
-};
-
-//***************************** Flowable ****************
-public interface Subscriber<T> {
-    public void onSubscribe(Subscription s);
-    public void onNext(T t);
-    public void onError(Throwable t);
-    public void onComplete();
-}
-
-public interface Subscription {
-    public void request(long n);
-    public void cancel();
-}
-
-
-//********************* Single *************************************
-Этот источник предоставляет либо один элемент в onNext, либо ошибку
-в onError, после чего передача данных будет считаться завершенной.
-onComplete не возвращает
-
-подписчик:
-public interface SingleObserver  {
-    void onSubscribe(@NonNull Disposable d);
-    void onSuccess(@NonNull Long aLong);
-    void onError(@NonNull Throwable e);
-}
-
-
-//********************* Completable *************************************
-Этот источник предоставит вам либо onComplete, либо ошибку в onError. Никаких данных в onNext он не передаст
-
-//********************* Maybe *************************************
-Его можно описать как Single OR Completable. Т.е. вам придет либо одно значение в onNext,
- либо onCompleted, но не оба. Также может прийти onError
-
-Для Maybe, аналогично с Single и Completable, есть специальные подписчики:
-MaybeObserver - аналог обычного Observer, но с методом onSuccess вместо onNext
-DisposableMaybeObserver - аналог DisposableObserver, но с методом onSuccess вместо onNext
-
-//******************* Action, Function ***********************
-Action, Function
-
-Cписок, как были переименованы (или удалены) Action и Function
-
-Action0 -> Action
-Action1 -> Consumer
-Action2 -> BiConsumer
-ActionN -> Consumer<Object[]>
-Action3 - Action9 -> удалены
-
-Func0 -> Callable
-Func1 -> Function
-Func2 -> BiFunction
-Func3 - Func9 -> Function3 - Function9
-
+Урок 13. Тестирование. RxJavaPlugins.
+TestObserver/TestSubscriber -класс представляет собой тестовый подписчик
  */
-
-
-
 
 public class MainActivity extends AppCompatActivity {
 
@@ -124,64 +32,52 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Flowable<Integer> flowable = Flowable.range(1, 10);
+        //for Flowable//
+        TestSubscriber<Integer> testSubscriber = new TestSubscriber<>();
+        Flowable.just(1, 2, 3, 4, 5).subscribe((FlowableSubscriber<? super Integer>) testSubscriber);
+        testSubscriber.assertValueCount(5);
 
-        flowable.subscribe(new Subscriber<Integer>() {//Subscriber - нужно делать request
-                                                        //в onSubscribe
+
+
+
+        TestObserver<Integer> testObserver = new TestObserver<>();
+        Observable.just(1, 2, 3, 4, 5).subscribe((Observer<? super Integer>) testObserver);
+        testObserver.assertValues(1, 2, 3, 4, 5);
+
+        Observable.interval(100, TimeUnit.MILLISECONDS)
+                .take(10)
+                .subscribe((Consumer<? super Long>) testObserver);
+
+        try {
+            testObserver.await(); //ждем окончания отправки данных обсервеблом
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            testObserver.await(100,TimeUnit.MILLISECONDS);//ждем с таймаутом
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        testObserver.assertComplete(); //проверяем на законченность
+
+        //Оператором test вы также можете создать TestObserver:
+        Observable.just("1", "2", "3", "4", "5")
+                .map(new Function<String, Integer>() {
+                    @Override
+                    public Integer apply(String s) throws Exception {
+                        return Integer.parseInt(s);
+                    }
+                })
+                .test()
+                .assertValues(1, 2, 3, 4, 5);
+
+        //глобальный обработчик ошибок, если в обсерверах нет своих
+        RxJavaPlugins.setErrorHandler(new Consumer<Throwable>() {
             @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);  //нужно делать запрос, иначе данные не будут
-                                            //отправляться из Flowable
-            }
-
-            @Override
-            public void onNext(Integer integer) {
-
-            }
-
-            @Override
-            public void onError(Throwable t) {
-
-            }
-
-            @Override
-            public void onComplete() {
-
-            }
-        });
-
-        //Если использовать DisposableSubscriber вместо Subscriber , не нужен request
-        Disposable disposable = flowable.subscribeWith(new DisposableSubscriber<Integer>() {
-            @Override
-            public void onNext(Integer integer) {
-            }
-            @Override
-            public void onError(Throwable t) {
-            }
-            @Override
-            public void onComplete() {
-            }
-        });
-        // ...
-        disposable.dispose();
-
-        //Single
-
-        //для Single свой тип подписчика SingleObserver
-        single.subscribe(new SingleObserver<Long>() {
-            @Override
-            public void onSubscribe(@NonNull Disposable d) {
-
-            }
-
-            @Override
-            public void onSuccess(@NonNull Long aLong) {
-
-            }
-
-            @Override
-            public void onError(@NonNull Throwable e) {
-
+            public void accept(Throwable throwable) throws Exception {
+                Log.d(TAG,"error " + throwable.getCause());
             }
         });
 
